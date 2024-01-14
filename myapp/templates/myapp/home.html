@@ -1,0 +1,159 @@
+{% extends "base_template.html" %} {% block title %} Home Page {%endblock %}
+{%block content %} {% load static %}
+<style>
+  .not-visible {
+    display: none;
+  }
+</style>
+
+<div class="content" id="content">
+  {%for post in posts %}
+  <div class="single_content border border-success mt-2 pl-2">
+    <div class="card-header"><strong>@{{post.author.username}} </strong></div>
+    <div class="card-body d-flex-row justify-content-between">
+      <div>
+        <h5 class="card-title">{{post.title}}</h5>
+        {% if post.image %}
+        <img
+          src="{{post.image.url}}"
+          class="img-thumbnail"
+          alt="..."
+          height="50%"
+          width="50%"
+        />
+        {%endif%}
+        <p>{{post.description}}</p>
+      </div>
+      <div>
+        {% if user == post.author %}
+        <form method="POST">
+          {% csrf_token %}
+          <button
+            type="submit"
+            class="btn btn-danger"
+            name="post-id"
+            value="{{post.id}}"
+          >
+            Delete
+          </button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+    <div class="card-footer text-muted">{{post.created_at}}</div>
+  </div>
+  {% empty %}
+  <p>No posts :(</p>
+  {% endfor %}
+
+  <div
+    class="spinner-border text-primary mt-2 not-visible"
+    role="status"
+    id="spinner"
+  >
+    <span class="sr-only">Loading...</span>
+  </div>
+  <div class="load-more__btn mt-3" id="btn">
+    <button type="button" class="btn btn-success">Load More Post</button>
+  </div>
+  <div class="alert alert-danger mt-2 not-visible" role="alert" id="alert">
+    No more post to load!!
+  </div>
+</div>
+
+{{total_obj|json_script:"json-total"}}
+
+<script>
+  const loadBtn = document.getElementById("btn");
+  const spinner = document.getElementById("spinner");
+  const total = JSON.parse(document.getElementById("json-total").textContent);
+  const alert = document.getElementById("alert");
+
+  function loadmorePost() {
+    var _current_item = $(".single_content").length;
+    const content_container = $("#content");
+    $.ajax({
+      url: '{% url "load" %}',
+      type: "GET",
+      data: {
+        offset: _current_item,
+      },
+      beforeSend: function () {
+        $(loadBtn).addClass("not-visible");
+        spinner.classList.remove("not-visible");
+      },
+      success: function (response) {
+        const data = response.posts;
+        spinner.classList.add("not-visible");
+        data.forEach((post) => {
+          const isCurrentUserAuthor =
+            "{{ user.username }}" === post.author__username;
+          const Img = "" !== post.image;
+          const postElement = $(
+            `<div class="single_content border border-success mt-2 pl-2">
+              <div class="card-header"><strong>@${
+                post.author__username
+              } </strong></div>
+              <div class="card-body d-flex-row justify-content-between">
+                <div>
+                  <h5 class="card-title">${post.title}</h5>
+                  ${
+                    Img
+                      ? `<img
+                    src="media/${post.image}"
+                    class="img-thumbnail"
+                    alt="..."
+                    height="50%"
+                    width="50%"
+                    />`
+                      : ""
+                  }
+                  <p>${post.description}</p>
+                </div>
+                <div>
+                  ${
+                    isCurrentUserAuthor
+                      ? `
+                    <form method="POST">
+                      {% csrf_token %}
+                      <button
+                        type="submit"
+                        class="btn btn-danger"
+                        name="post-id"
+                        value="${post.id}"
+                      >
+                        Delete
+                      </button>
+                    </form>`
+                      : ""
+                  }
+                </div>
+              </div>
+              <div class="card-footer text-muted">${post.created_at}</div>
+            </div>`
+          );
+
+          content_container.append(postElement);
+        });
+
+        if (_current_item == total) {
+          $(alert).appendTo(content_container);
+          alert.classList.remove("not-visible");
+        } else {
+          $(loadBtn).appendTo(content_container);
+          $(loadBtn).removeClass("not-visible");
+        }
+      },
+      error: function (err) {
+        console.log("vixie");
+        console.log(err);
+      },
+    });
+  }
+
+  loadBtn.addEventListener("click", () => {
+    loadmorePost();
+  });
+</script>
+
+{%endblock%}

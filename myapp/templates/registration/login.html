@@ -1,0 +1,16 @@
+{% extends "base_template.html" %} 
+{% block title %} Login {%endblock %} 
+{%load crispy_forms_tags%} 
+{%block content %} 
+{%if not request.user.is_authenticated %}
+<div>
+  <form method="post">
+    {% csrf_token %}{{form|crispy}}
+    <p>Create account <a href="/sign-up">Click Here</a>!</p>
+    <button type="submit" class="btn btn-success">Login</button>
+  </form>
+</div>
+{% else %}
+<p>alread logged in.</p>
+
+{% endif %} {%endblock%}
